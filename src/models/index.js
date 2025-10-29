@@ -4,7 +4,8 @@ const CountryModel = require("./country");
 const MetaModel = require("./meta");
 require("dotenv").config();
 
-const sequelize = new Sequelize(
+// Primary Sequelize (MySQL) configuration
+let sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
   process.env.DB_PASS,
@@ -16,8 +17,31 @@ const sequelize = new Sequelize(
   }
 );
 
-const Country = CountryModel(sequelize);
-const Meta = MetaModel(sequelize);
+let Country = CountryModel(sequelize);
+let Meta = MetaModel(sequelize);
+
+async function useSqliteFallback() {
+  const sqlitePath = process.env.SQLITE_PATH || "cache/dev.sqlite";
+  console.warn(`Falling back to SQLite at ${sqlitePath}`);
+  const sqliteSequelize = new Sequelize({
+    dialect: "sqlite",
+    storage: sqlitePath,
+    logging: false,
+  });
+  // re-init models on sqlite instance
+  Country = CountryModel(sqliteSequelize);
+  Meta = MetaModel(sqliteSequelize);
+
+  // update exported references so callers that read module.exports later can see them
+  module.exports.sequelize = sqliteSequelize;
+  module.exports.Country = Country;
+  module.exports.Meta = Meta;
+
+  sequelize = sqliteSequelize;
+
+  await sequelize.sync({ alter: true });
+  console.log("SQLite DB synced");
+}
 
 const sync = async () => {
   try {
@@ -26,9 +50,15 @@ const sync = async () => {
     console.log("DB synced");
     return true;
   } catch (err) {
-    console.error("Failed to sync DB", err);
-    // Return false so the caller can decide how to proceed (don't exit here)
-    return false;
+    console.error("Failed to sync DB (MySQL)", err);
+    try {
+      // Try to fallback to sqlite for local/dev/test runs
+      await useSqliteFallback();
+      return true;
+    } catch (e) {
+      console.error("Failed to fallback to SQLite", e);
+      return false;
+    }
   }
 };
 

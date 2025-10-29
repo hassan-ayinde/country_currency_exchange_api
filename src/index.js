@@ -4,10 +4,14 @@ const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
 const countriesRouter = require("./routes/countries");
+const countriesCtrl = require("./controllers/countriesController");
 const { sync } = require("./models/index");
 
 app.use(express.json());
 app.use("/countries", countriesRouter);
+
+// expose a top-level health/status endpoint expected by tests
+app.get("/status", countriesCtrl.getStatus);
 
 // global error fallback for JSON responses
 app.use((err, req, res, next) => {

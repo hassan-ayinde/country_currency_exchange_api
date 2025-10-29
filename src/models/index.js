@@ -1,17 +1,18 @@
-const { Sequelize } = require("sequelize");
-const CountryModel = require("./country");
-const MetaModel = require("./meta");
-require("dotenv").config();
+// src/models/index.js
+const { Sequelize } = require('sequelize');
+const CountryModel = require('./country');
+const MetaModel = require('./meta');
+require('dotenv').config();
 
 const sequelize = new Sequelize(
-  process.env.MYSQLDATABASE,
-  process.env.MYSQLUSER,
-  process.env.MYSQLPASSWORD,
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASS,
   {
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     dialect: "mysql",
-    logging: false,
+    logging: false, // optional, removes console logs
   }
 );
 
@@ -20,22 +21,17 @@ const Meta = MetaModel(sequelize);
 
 const sync = async () => {
   try {
-    console.log("🔌 Connecting to:", {
-      host: process.env.MYSQLHOST,
-      user: process.env.MYSQLUSER,
-      db: process.env.MYSQLDATABASE,
-    });
-
     await sequelize.authenticate();
     await sequelize.sync({ alter: true });
-    console.log("✅ DB synced successfully");
+    console.log('DB synced');
   } catch (err) {
-    console.error("❌ Failed to sync DB", err);
+    console.error('Failed to sync DB', err);
     process.exit(1);
   }
 };
 
 if (require.main === module) {
+  // run when called as script: npm run sync-db
   sync();
 }
 

@@ -1,5 +1,4 @@
 // src/app.js
-require('dotenv-expand').expand(require('dotenv').config());
 require('dotenv').config();
 const express = require('express');
 const app = express();
